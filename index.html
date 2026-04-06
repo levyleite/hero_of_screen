@@ -41,10 +41,10 @@
 
   /* ── TIER CARD STYLES ── */
   #levelup-overlay {
-    display:none; position:absolute; inset:0;
+    display:none; position:fixed; inset:0;
     background:radial-gradient(ellipse at center, rgba(14,5,30,0.97) 0%, rgba(3,1,7,0.99) 100%);
     flex-direction:column; align-items:center; justify-content:center;
-    gap:0.75rem; z-index:10; pointer-events:all;
+    gap:0.75rem; z-index:10; pointer-events:all; overflow-y:auto;
   }
   #levelup-overlay.active { display:flex; }
   .lu-title-sub { font-size:9px; letter-spacing:5px; color:rgba(180,120,220,0.55); text-transform:uppercase; }
@@ -125,7 +125,7 @@
   @keyframes blink { 0%,100%{opacity:.3} 50%{opacity:1} }
 
   /* Game Over */
-  #gameover-overlay { display:none; position:absolute; inset:0; background:rgba(3,1,7,0.96); flex-direction:column; align-items:center; justify-content:center; gap:1rem; z-index:20; pointer-events:all; }
+  #gameover-overlay { display:none; position:fixed; inset:0; background:rgba(3,1,7,0.96); flex-direction:column; align-items:center; justify-content:center; gap:1rem; z-index:20; pointer-events:all; overflow-y:auto; }
   #gameover-overlay.active { display:flex; }
   .go-title { font-family:'Cinzel Decorative',serif; font-size:26px; color:#c84444; letter-spacing:3px; }
   .go-sub { font-size:10px; letter-spacing:3px; color:rgba(180,80,80,0.55); }
@@ -145,10 +145,10 @@
 
   /* ── START OVERLAY ── */
   #start-overlay {
-    display:flex; position:absolute; inset:0;
+    display:flex; position:fixed; inset:0;
     background:radial-gradient(ellipse at center, rgba(14,5,30,0.98) 0%, rgba(3,1,7,1) 100%);
     flex-direction:column; align-items:center; justify-content:center;
-    gap:1rem; z-index:30; pointer-events:all;
+    gap:1rem; z-index:30; pointer-events:all; overflow-y:auto; padding:1rem 0;
   }
   #start-overlay.hidden { display:none; }
   .so-title-sub { font-size:9px; letter-spacing:5px; color:rgba(180,120,220,0.5); text-transform:uppercase; }
@@ -192,25 +192,43 @@
 
   /* ranking no game over */
   .go-ranking { margin-top:0.6rem; }
+
+  /* ── JOYSTICK VIRTUAL ── */
+  #joystick-zone {
+    display:none; position:fixed; bottom:28px; left:28px;
+    z-index:5; touch-action:none; user-select:none;
+  }
+  #joystick-base {
+    width:110px; height:110px; border-radius:50%;
+    background:rgba(80,30,160,0.18); border:2px solid rgba(150,80,220,0.35);
+    position:relative; touch-action:none;
+  }
+  #joystick-thumb {
+    width:46px; height:46px; border-radius:50%;
+    background:rgba(160,80,240,0.45); border:2px solid rgba(200,120,255,0.6);
+    position:absolute; top:50%; left:50%;
+    transform:translate(-50%,-50%);
+    pointer-events:none; transition:transform 0.05s;
+  }
+
+  /* ── MOBILE RESPONSIVE ── */
+  @media (max-width:600px) {
+    .lu-cards { flex-direction:column; align-items:center; gap:10px; width:100%; padding:0 12px; box-sizing:border-box; }
+    .lu-card { width:min(280px, 90vw); }
+    .lu-title { font-size:15px; }
+    .lu-title-sub { font-size:8px; }
+    .so-title { font-size:18px; }
+    #nome-input { width:min(220px,80vw); font-size:13px; }
+    .ranking-table { width:min(280px,92vw); }
+    .go-title { font-size:20px; }
+    .go-sub { font-size:8px; text-align:center; padding:0 12px; }
+    #levelup-overlay { justify-content:flex-start; padding-top:1.5rem; }
+  }
 </style>
 </head>
 <body>
 <div id="game-wrapper">
   <canvas id="canvas" width="800" height="560"></canvas>
-
-  <div id="start-overlay">
-    <div class="so-title-sub">Prepare-se, Guerreiro</div>
-    <div class="so-title">Hero of Screen</div>
-    <div class="so-divider"><div class="so-line"></div><div class="so-gem"></div><div class="so-line r"></div></div>
-    <div class="so-name-label">Seu nome</div>
-    <input id="nome-input" type="text" maxlength="20" placeholder="Digite seu nome..." autocomplete="off" />
-    <button id="btn-jogar" onclick="confirmarNome()">⚔ Entrar na Arena</button>
-    <div class="ranking-wrap">
-      <div class="so-divider" style="margin-top:0.5rem"><div class="so-line"></div><div class="so-gem"></div><div class="so-line r"></div></div>
-      <div class="ranking-title">Melhores Guerreiros</div>
-      <div id="ranking-start"></div>
-    </div>
-  </div>
 
   <div id="hud">
     <div id="score-area">
@@ -240,24 +258,44 @@
   </div>
 
   <div id="damage-numbers"></div>
+</div>
 
-  <div id="levelup-overlay">
-    <div class="lu-title-sub">Guerreiro</div>
-    <div class="lu-title">Novo Nível!</div>
-    <div class="lu-divider"><div class="lu-line"></div><div class="lu-gem"></div><div class="lu-line r"></div></div>
-    <div class="lu-cards" id="lu-cards"></div>
-    <div id="lu-countdown">Aguarde 3s...</div>
-    <div class="lu-hint" id="lu-hint" style="display:none">Escolha uma bênção</div>
+<div id="start-overlay">
+  <div class="so-title-sub">Prepare-se, Guerreiro</div>
+  <div class="so-title">Hero of Screen</div>
+  <div class="so-divider"><div class="so-line"></div><div class="so-gem"></div><div class="so-line r"></div></div>
+  <div class="so-name-label">Seu nome</div>
+  <input id="nome-input" type="text" maxlength="20" placeholder="Digite seu nome..." autocomplete="off" />
+  <button id="btn-jogar" onclick="confirmarNome()">⚔ Entrar na Arena</button>
+  <div class="ranking-wrap">
+    <div class="so-divider" style="margin-top:0.5rem"><div class="so-line"></div><div class="so-gem"></div><div class="so-line r"></div></div>
+    <div class="ranking-title">Melhores Guerreiros</div>
+    <div id="ranking-start"></div>
   </div>
+</div>
 
-  <div id="gameover-overlay">
-    <div class="go-title">VOCÊ MORREU</div>
-    <div class="go-sub" id="go-stats"></div>
-    <div class="go-ranking ranking-wrap">
-      <div class="ranking-title">Melhores Guerreiros</div>
-      <div id="ranking-go"></div>
-    </div>
-    <button class="go-btn" onclick="reiniciarJogo()">↺ Tentar Novamente</button>
+<div id="levelup-overlay">
+  <div class="lu-title-sub">Guerreiro</div>
+  <div class="lu-title">Novo Nível!</div>
+  <div class="lu-divider"><div class="lu-line"></div><div class="lu-gem"></div><div class="lu-line r"></div></div>
+  <div class="lu-cards" id="lu-cards"></div>
+  <div id="lu-countdown">Aguarde 3s...</div>
+  <div class="lu-hint" id="lu-hint" style="display:none">Escolha uma bênção</div>
+</div>
+
+<div id="gameover-overlay">
+  <div class="go-title">VOCÊ MORREU</div>
+  <div class="go-sub" id="go-stats"></div>
+  <div class="go-ranking ranking-wrap">
+    <div class="ranking-title">Melhores Guerreiros</div>
+    <div id="ranking-go"></div>
+  </div>
+  <button class="go-btn" onclick="reiniciarJogo()">↺ Tentar Novamente</button>
+</div>
+
+<div id="joystick-zone">
+  <div id="joystick-base">
+    <div id="joystick-thumb"></div>
   </div>
 </div>
 
@@ -439,6 +477,7 @@ class Jogador {
     if (keys['a']||keys['arrowleft'])  dx=-1;
     if (keys['d']||keys['arrowright']) dx=1;
     if (dx&&dy){dx*=0.707;dy*=0.707;}
+    if (joystickActive) { dx=touchDir.x; dy=touchDir.y; }
     this.x = Math.max(12,Math.min(CW-12, this.x+dx*this.speed*dt));
     this.y = Math.max(12,Math.min(CH-12, this.y+dy*this.speed*dt));
     if (this.invincible>0) this.invincible-=dt;
@@ -991,6 +1030,54 @@ function aumentarSkillJogador(nome,attr,val){
   if(attr==='cooldown') sk.cdMax=Math.max(0.2,sk.cdMax*(1-val));
   if(attr==='tamanho') sk.tamanho=Math.round(sk.tamanho*(1+val));
 }
+
+// ── TOUCH / JOYSTICK ──
+const touchDir = { x:0, y:0 };
+let joystickActive = false;
+let joystickOrigin = { x:0, y:0 };
+const JRADIUS = 55;
+
+const jZone  = document.getElementById('joystick-zone');
+const jBase  = document.getElementById('joystick-base');
+const jThumb = document.getElementById('joystick-thumb');
+
+const isTouchDevice = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+if (isTouchDevice) {
+  jZone.style.display = 'block';
+  document.getElementById('keys-hint').style.display = 'none';
+}
+
+function jMove(cx, cy) {
+  let dx = cx - joystickOrigin.x;
+  let dy = cy - joystickOrigin.y;
+  const dist = Math.hypot(dx, dy);
+  if (dist > JRADIUS) { dx = dx/dist*JRADIUS; dy = dy/dist*JRADIUS; }
+  touchDir.x = dx / JRADIUS;
+  touchDir.y = dy / JRADIUS;
+  jThumb.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+}
+
+jBase.addEventListener('touchstart', e => {
+  e.preventDefault();
+  joystickActive = true;
+  const r = jBase.getBoundingClientRect();
+  joystickOrigin.x = r.left + r.width/2;
+  joystickOrigin.y = r.top  + r.height/2;
+  jMove(e.touches[0].clientX, e.touches[0].clientY);
+}, { passive:false });
+
+jBase.addEventListener('touchmove', e => {
+  e.preventDefault();
+  if (!joystickActive) return;
+  jMove(e.touches[0].clientX, e.touches[0].clientY);
+}, { passive:false });
+
+jBase.addEventListener('touchend', e => {
+  e.preventDefault();
+  joystickActive = false;
+  touchDir.x = 0; touchDir.y = 0;
+  jThumb.style.transform = 'translate(-50%,-50%)';
+}, { passive:false });
 
 // ── FULLSCREEN SCALE ──
 function ajustarScale() {
