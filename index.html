@@ -232,9 +232,9 @@
     </div>
 
     <div id="skills-hud">
-      <div class="skill-hud-item">Golpe <div class="skill-hud-cd"><div class="skill-hud-cd-fill" id="cd-golpe" style="width:100%"></div></div></div>
-      <div class="skill-hud-item">Grito <div class="skill-hud-cd"><div class="skill-hud-cd-fill" id="cd-grito" style="width:100%"></div></div></div>
-      <div class="skill-hud-item">Bumerangue <div class="skill-hud-cd"><div class="skill-hud-cd-fill" id="cd-bume" style="width:100%"></div></div></div>
+      <div class="skill-hud-item" id="hud-golpe">Golpe <div class="skill-hud-cd"><div class="skill-hud-cd-fill" id="cd-golpe" style="width:100%"></div></div></div>
+      <div class="skill-hud-item" id="hud-grito">Grito <div class="skill-hud-cd"><div class="skill-hud-cd-fill" id="cd-grito" style="width:100%"></div></div></div>
+      <div class="skill-hud-item" id="hud-bume">Bumerangue <div class="skill-hud-cd"><div class="skill-hud-cd-fill" id="cd-bume" style="width:100%"></div></div></div>
     </div>
     <div id="heart-notif">❤️ +20 Vida!</div>
   </div>
@@ -368,7 +368,7 @@ class Jogador {
       golpeArrojado: {
         nome:'Golpe Arrojado', tipo:'Ataque Ativo', icone:'⚔️',
         desc:'Ataca o inimigo mais próximo', dano:18,
-        cdMax:0.8, cd:0,
+        cdMax:0.8, cd:0, ativo:true,
         bonusTpls:[
           { gerar:(t)=>({ label:`+${pct(t)}% Dano [${t.nome}]`, val:`+${pct(t)}%`, desc:`Dano aumentado em ${pct(t)}%`, tier:t, apply:(sk)=>{ sk.dano=Math.round(sk.dano*(1+t.mult)); } }) },
           { gerar:(t)=>({ label:`+${pct(t)}% Vel. Ataque [${t.nome}]`, val:`-${pct(t)}% CD`, desc:`Cooldown reduzido em ${pct(t)}%`, tier:t, apply:(sk)=>{ sk.cdMax=Math.max(0.2,sk.cdMax*(1-t.mult)); } }) }
@@ -377,7 +377,7 @@ class Jogador {
       gritoDeguerra: {
         nome:'Grito de Guerra', tipo:'Efeito de Área', icone:'💥',
         desc:'Onda de choque empurra todos próximos',
-        dano:12, area:100, cdMax:3.0, cd:0,
+        dano:12, area:100, cdMax:3.0, cd:0, ativo:false,
         bonusTpls:[
           { gerar:(t)=>({ label:`+${pct(t)}% Dano [${t.nome}]`, val:`+${pct(t)}%`, desc:`Dano do grito +${pct(t)}%`, tier:t, apply:(sk)=>{ sk.dano=Math.round(sk.dano*(1+t.mult)); } }) },
           { gerar:(t)=>{ const p=Math.round(t.mult*120); return { label:`+${p}% Área [${t.nome}]`, val:`+${p}%`, desc:`Área aumentada em ${p}%`, tier:t, apply:(sk)=>{ sk.area=Math.round(sk.area*(1+p/100)); } }; } }
@@ -386,7 +386,7 @@ class Jogador {
       hemorragia: {
         nome:'Hemorragia', tipo:'Passiva', icone:'🩸',
         desc:'Ataques aplicam sangramento',
-        chance:0.30, danoPorTick:3, duracao:5,
+        chance:0.30, danoPorTick:3, duracao:5, ativo:false,
         bonusTpls:[
           { gerar:(t)=>({ label:`+${pct(t)}% Sangramento [${t.nome}]`, val:`+${pct(t)}%`, desc:`Dano de sangramento +${pct(t)}%`, tier:t, apply:(sk)=>{ sk.danoPorTick=Math.round(sk.danoPorTick*(1+t.mult)); } }) },
           { gerar:(t)=>{ const s=Math.round(t.mult*8); return { label:`+${s}s Duração [${t.nome}]`, val:`+${s}s`, desc:`Sangramento dura ${s}s a mais`, tier:t, apply:(sk)=>{ sk.duracao+=s; } }; } }
@@ -395,7 +395,7 @@ class Jogador {
       bumerangue: {
         nome:'Bumerangue', tipo:'Arremesso', icone:'🪃',
         desc:'Vai e volta causando dano',
-        dano:14, tamanho:12, cdMax:2.2, cd:0,
+        dano:14, tamanho:12, cdMax:2.2, cd:0, ativo:false,
         bonusTpls:[
           { gerar:(t)=>({ label:`+${pct(t)}% Dano [${t.nome}]`, val:`+${pct(t)}%`, desc:`Dano do bumerangue +${pct(t)}%`, tier:t, apply:(sk)=>{ sk.dano=Math.round(sk.dano*(1+t.mult)); } }) },
           { gerar:(t)=>({ label:`+${pct(t)}% Vel. Recarga [${t.nome}]`, val:`-${pct(t)}% CD`, desc:`Cooldown reduzido em ${pct(t)}%`, tier:t, apply:(sk)=>{ sk.cdMax=Math.max(0.5,sk.cdMax*(1-t.mult)); } }) },
@@ -449,8 +449,8 @@ class Jogador {
     sk.bumerangue.cd    = Math.max(0,sk.bumerangue.cd-dt);
 
     if (sk.golpeArrojado.cd<=0){ sk.golpeArrojado.cd=sk.golpeArrojado.cdMax; dispGolpe(); }
-    if (sk.gritoDeguerra.cd<=0){ sk.gritoDeguerra.cd=sk.gritoDeguerra.cdMax; dispGrito(); }
-    if (sk.bumerangue.cd<=0 && !bumeAtivo){ sk.bumerangue.cd=sk.bumerangue.cdMax; dispBume(); }
+    if (sk.gritoDeguerra.ativo && sk.gritoDeguerra.cd<=0){ sk.gritoDeguerra.cd=sk.gritoDeguerra.cdMax; dispGrito(); }
+    if (sk.bumerangue.ativo && sk.bumerangue.cd<=0 && !bumeAtivo){ sk.bumerangue.cd=sk.bumerangue.cdMax; dispBume(); }
   }
 
   draw() {
@@ -504,7 +504,7 @@ class Inimigo {
     this.hp-=d;
     spawnDmg(this.x,this.y-12,d);
     const hemo=jog.skills.hemorragia;
-    if(Math.random()<hemo.chance) this.bleeds.push({timer:hemo.duracao,dano:hemo.danoPorTick});
+    if(hemo.ativo && Math.random()<hemo.chance) this.bleeds.push({timer:hemo.duracao,dano:hemo.danoPorTick});
     if(this.hp<=0&&!this.dead){this.dead=true;jog.kills++;jog.ganharXP(1);}
   }
 
@@ -779,16 +779,41 @@ function drawBg(){
 let jogoPausado=false, luReady=false, luCdTimer=0;
 
 function gerarCartas(n){
-  const allSks=Object.values(jogador.skills);
-  const pool=[];
-  for(let i=0;i<n;i++){
-    const sk=allSks[Math.floor(Math.random()*allSks.length)];
-    const tmpl=sk.bonusTpls[Math.floor(Math.random()*sk.bonusTpls.length)];
-    const tier=sortearTier();
-    const bonus=tmpl.gerar(tier);
-    pool.push({sk,bonus});
+  const allSks = Object.values(jogador.skills);
+  const ativas  = allSks.filter(sk => sk.ativo);
+  const inativas = allSks.filter(sk => !sk.ativo);
+
+  // Monta candidatos: desbloquear inativas + buffs para ativas
+  const candidatos = [];
+  for(const sk of inativas){
+    candidatos.push({ sk, isUnlock:true });
   }
-  return pool;
+  for(const sk of ativas){
+    for(const tmpl of sk.bonusTpls){
+      candidatos.push({ sk, tmpl, isUnlock:false });
+    }
+  }
+
+  // Embaralha e pega n únicos
+  candidatos.sort(()=>Math.random()-0.5);
+  const selecionados = candidatos.slice(0, n);
+
+  return selecionados.map(({ sk, tmpl, isUnlock }) => {
+    const tier = sortearTier();
+    if(isUnlock){
+      return {
+        sk, isUnlock:true,
+        bonus:{
+          val:'DESBLOQUEAR',
+          desc:`Ativa ${sk.nome} permanentemente`,
+          tier,
+          apply:(s)=>{ s.ativo=true; }
+        }
+      };
+    }
+    const bonus = tmpl.gerar(tier);
+    return { sk, isUnlock:false, bonus };
+  });
 }
 
 function mostrarLevelUp(){
@@ -800,18 +825,20 @@ function mostrarLevelUp(){
   const cont=document.getElementById('lu-cards');
   cont.innerHTML='';
 
-  pool.forEach(({sk,bonus})=>{
+  pool.forEach(({sk,bonus,isUnlock})=>{
     const card=document.createElement('div');
     card.className=`lu-card ${bonus.tier.classe}`;
+    const badgeLabel = isUnlock ? `✦ Nova Skill` : `Rank ${bonus.tier.nome}`;
+    const bonusLabel = isUnlock ? 'Desbloquear' : 'Bênção';
     card.innerHTML=`
       <div class="lu-card-top"></div>
-      <div class="tier-badge">Rank ${bonus.tier.nome}</div>
+      <div class="tier-badge">${badgeLabel}</div>
       <div class="lu-card-icon">${sk.icone}</div>
       <div class="lu-card-body">
         <div class="lu-card-name">${sk.nome}</div>
         <div class="lu-card-desc">${sk.desc}</div>
         <div class="lu-bonus-box">
-          <div class="lu-bonus-label">Bênção</div>
+          <div class="lu-bonus-label">${bonusLabel}</div>
           <div class="lu-bonus-value">${bonus.val}</div>
           <div class="lu-bonus-desc">${bonus.desc}</div>
         </div>
@@ -859,8 +886,18 @@ function updHUD(){
   document.getElementById('kill-count').textContent=jogador.kills+' inimigos';
   const sk=jogador.skills;
   document.getElementById('cd-golpe').style.width=((1-sk.golpeArrojado.cd/sk.golpeArrojado.cdMax)*100)+'%';
-  document.getElementById('cd-grito').style.width=((1-sk.gritoDeguerra.cd/sk.gritoDeguerra.cdMax)*100)+'%';
-  document.getElementById('cd-bume').style.width= ((1-sk.bumerangue.cd/sk.bumerangue.cdMax)*100)+'%';
+
+  const hudGrito = document.getElementById('hud-grito');
+  if(sk.gritoDeguerra.ativo){
+    hudGrito.style.opacity='1';
+    document.getElementById('cd-grito').style.width=((1-sk.gritoDeguerra.cd/sk.gritoDeguerra.cdMax)*100)+'%';
+  } else { hudGrito.style.opacity='0.3'; document.getElementById('cd-grito').style.width='0%'; }
+
+  const hudBume = document.getElementById('hud-bume');
+  if(sk.bumerangue.ativo){
+    hudBume.style.opacity='1';
+    document.getElementById('cd-bume').style.width=((1-sk.bumerangue.cd/sk.bumerangue.cdMax)*100)+'%';
+  } else { hudBume.style.opacity='0.3'; document.getElementById('cd-bume').style.width='0%'; }
 }
 
 // ═══════════════════════════════════════════════
