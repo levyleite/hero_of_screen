@@ -142,11 +142,75 @@
 
   #heart-notif { position:absolute; top:48px; left:50%; transform:translateX(-50%); font-size:9px; letter-spacing:3px; color:#ff6688; text-transform:uppercase; opacity:0; transition:opacity 0.3s; pointer-events:none; white-space:nowrap; }
   #heart-notif.show { opacity:1; }
+
+  /* ── START OVERLAY ── */
+  #start-overlay {
+    display:flex; position:absolute; inset:0;
+    background:radial-gradient(ellipse at center, rgba(14,5,30,0.98) 0%, rgba(3,1,7,1) 100%);
+    flex-direction:column; align-items:center; justify-content:center;
+    gap:1rem; z-index:30; pointer-events:all;
+  }
+  #start-overlay.hidden { display:none; }
+  .so-title-sub { font-size:9px; letter-spacing:5px; color:rgba(180,120,220,0.5); text-transform:uppercase; }
+  .so-title { font-family:'Cinzel Decorative',serif; font-size:24px; font-weight:700; color:#e8c87a; letter-spacing:3px; }
+  .so-divider { display:flex; align-items:center; gap:8px; margin:0.2rem 0; }
+  .so-line { width:90px; height:1px; background:linear-gradient(90deg,transparent,rgba(180,100,220,0.45)); }
+  .so-line.r { background:linear-gradient(90deg,rgba(180,100,220,0.45),transparent); }
+  .so-gem { width:5px; height:5px; background:rgba(180,100,220,0.65); clip-path:polygon(50% 0%,100% 50%,50% 100%,0% 50%); }
+
+  .so-name-label { font-size:9px; letter-spacing:3px; color:rgba(180,130,220,0.6); text-transform:uppercase; }
+  #nome-input {
+    font-family:'Cinzel',serif; font-size:14px; letter-spacing:2px;
+    color:#e8d8ff; background:rgba(30,10,60,0.7);
+    border:1px solid rgba(140,80,220,0.45); border-radius:4px;
+    padding:9px 18px; text-align:center; outline:none; width:220px;
+    transition:border-color 0.2s;
+  }
+  #nome-input:focus { border-color:rgba(200,120,255,0.8); }
+  #nome-input::placeholder { color:rgba(140,100,180,0.4); }
+  #btn-jogar {
+    font-family:'Cinzel',serif; font-size:11px; letter-spacing:3px;
+    color:#e8c87a; background:rgba(60,20,100,0.5);
+    border:1px solid rgba(180,120,50,0.5); border-radius:4px;
+    padding:10px 28px; cursor:pointer; text-transform:uppercase;
+    transition:background 0.2s, border-color 0.2s; margin-top:0.3rem;
+  }
+  #btn-jogar:hover { background:rgba(90,35,140,0.5); border-color:rgba(230,180,60,0.7); }
+
+  /* ── RANKING TABLE ── */
+  .ranking-wrap { display:flex; flex-direction:column; align-items:center; gap:0.4rem; margin-top:0.4rem; }
+  .ranking-title { font-size:8px; letter-spacing:4px; color:rgba(200,150,255,0.45); text-transform:uppercase; }
+  .ranking-table { width:280px; border-collapse:collapse; }
+  .ranking-table th { font-size:7px; letter-spacing:3px; color:rgba(160,110,220,0.4); text-transform:uppercase; padding:3px 6px; border-bottom:1px solid rgba(100,50,160,0.2); }
+  .ranking-table td { font-size:9px; color:rgba(200,170,230,0.7); padding:4px 6px; text-align:center; border-bottom:1px solid rgba(80,40,120,0.15); }
+  .ranking-table td.rank-pos { color:rgba(220,180,80,0.7); font-weight:700; font-size:10px; }
+  .ranking-table td.rank-name { text-align:left; color:#c8a8e8; }
+  .ranking-table tr.rank-gold td { color:#eeba35; }
+  .ranking-table tr.rank-silver td { color:#b0c4d8; }
+  .ranking-table tr.rank-bronze td { color:#cd8c52; }
+  .ranking-empty { font-size:8px; letter-spacing:2px; color:rgba(140,100,180,0.35); font-style:italic; }
+
+  /* ranking no game over */
+  .go-ranking { margin-top:0.6rem; }
 </style>
 </head>
 <body>
 <div id="game-wrapper">
   <canvas id="canvas" width="800" height="560"></canvas>
+
+  <div id="start-overlay">
+    <div class="so-title-sub">Prepare-se, Guerreiro</div>
+    <div class="so-title">Hero of Screen</div>
+    <div class="so-divider"><div class="so-line"></div><div class="so-gem"></div><div class="so-line r"></div></div>
+    <div class="so-name-label">Seu nome</div>
+    <input id="nome-input" type="text" maxlength="20" placeholder="Digite seu nome..." autocomplete="off" />
+    <button id="btn-jogar" onclick="confirmarNome()">⚔ Entrar na Arena</button>
+    <div class="ranking-wrap">
+      <div class="so-divider" style="margin-top:0.5rem"><div class="so-line"></div><div class="so-gem"></div><div class="so-line r"></div></div>
+      <div class="ranking-title">Melhores Guerreiros</div>
+      <div id="ranking-start"></div>
+    </div>
+  </div>
 
   <div id="hud">
     <div id="score-area">
@@ -189,11 +253,80 @@
   <div id="gameover-overlay">
     <div class="go-title">VOCÊ MORREU</div>
     <div class="go-sub" id="go-stats"></div>
+    <div class="go-ranking ranking-wrap">
+      <div class="ranking-title">Melhores Guerreiros</div>
+      <div id="ranking-go"></div>
+    </div>
     <button class="go-btn" onclick="reiniciarJogo()">↺ Tentar Novamente</button>
   </div>
 </div>
 
 <script>
+// ═══════════════════════════════════════════════
+// RANKING SYSTEM
+// ═══════════════════════════════════════════════
+const RANKING_KEY = 'hos_ranking_v1';
+const RANKING_MAX = 5;
+
+function calcScore(kills, wave, nivel) {
+  return kills * 10 + wave * 50 + nivel * 20;
+}
+
+function carregarRanking() {
+  try { return JSON.parse(localStorage.getItem(RANKING_KEY)) || []; }
+  catch { return []; }
+}
+
+function salvarRanking(nome, kills, wave, nivel) {
+  const lista = carregarRanking();
+  lista.push({ nome, kills, wave, nivel, score: calcScore(kills, wave, nivel), data: new Date().toLocaleDateString('pt-BR') });
+  lista.sort((a, b) => b.score - a.score);
+  const top = lista.slice(0, RANKING_MAX);
+  localStorage.setItem(RANKING_KEY, JSON.stringify(top));
+  return top;
+}
+
+function renderRanking(containerId, destacarNome) {
+  const lista = carregarRanking();
+  const el = document.getElementById(containerId);
+  if (!lista.length) {
+    el.innerHTML = '<div class="ranking-empty">Nenhum guerreiro ainda — seja o primeiro!</div>';
+    return;
+  }
+  const rowClasses = ['rank-gold', 'rank-silver', 'rank-bronze', '', ''];
+  const medals = ['🥇', '🥈', '🥉', '4º', '5º'];
+  let rows = lista.map((p, i) => {
+    const hl = destacarNome && p.nome === destacarNome && p.score === calcScore(jogador?.kills||0, wave, jogador?.nivel||1) ? ' style="background:rgba(200,160,50,0.08)"' : '';
+    return `<tr class="${rowClasses[i]||''}"${hl}>
+      <td class="rank-pos">${medals[i]}</td>
+      <td class="rank-name">${escHtml(p.nome)}</td>
+      <td>${p.score.toLocaleString()}</td>
+      <td>${p.kills}</td>
+      <td>${p.wave}</td>
+    </tr>`;
+  }).join('');
+  el.innerHTML = `<table class="ranking-table">
+    <thead><tr><th>#</th><th style="text-align:left">Nome</th><th>Pontos</th><th>Kills</th><th>Onda</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Nome do jogador atual
+let nomeJogador = '';
+
+function confirmarNome() {
+  const inp = document.getElementById('nome-input');
+  const nome = inp.value.trim();
+  if (!nome) { inp.focus(); inp.style.borderColor='rgba(255,80,80,0.7)'; setTimeout(()=>inp.style.borderColor='',1000); return; }
+  nomeJogador = nome;
+  document.getElementById('start-overlay').classList.add('hidden');
+  inicializar();
+}
+
 // ═══════════════════════════════════════════════
 // TIER SYSTEM
 // ═══════════════════════════════════════════════
@@ -734,13 +867,20 @@ function updHUD(){
 // GAME OVER / RESET
 // ═══════════════════════════════════════════════
 function mostrarGameOver(){
+  salvarRanking(nomeJogador, jogador.kills, wave, jogador.nivel);
   document.getElementById('gameover-overlay').classList.add('active');
-  document.getElementById('go-stats').textContent=`Nível ${jogador.nivel} · ${jogador.kills} inimigos · Onda ${wave}`;
+  const score = calcScore(jogador.kills, wave, jogador.nivel);
+  document.getElementById('go-stats').textContent=`${escHtml(nomeJogador)}  ·  Nível ${jogador.nivel}  ·  ${jogador.kills} kills  ·  Onda ${wave}  ·  ${score.toLocaleString()} pts`;
+  renderRanking('ranking-go', nomeJogador);
 }
 function reiniciarJogo(){
   document.getElementById('gameover-overlay').classList.remove('active');
   document.getElementById('levelup-overlay').classList.remove('active');
-  inicializar();
+  // volta pra tela de nome
+  const so = document.getElementById('start-overlay');
+  so.classList.remove('hidden');
+  renderRanking('ranking-start');
+  document.getElementById('nome-input').value = nomeJogador;
 }
 
 // ═══════════════════════════════════════════════
@@ -815,7 +955,11 @@ function aumentarSkillJogador(nome,attr,val){
   if(attr==='tamanho') sk.tamanho=Math.round(sk.tamanho*(1+val));
 }
 
-inicializar();
+// Inicia na tela de nome
+renderRanking('ranking-start');
+document.getElementById('nome-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') confirmarNome();
+});
 </script>
 </body>
 </html>
