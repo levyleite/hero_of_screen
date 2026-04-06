@@ -7,8 +7,8 @@
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cinzel+Decorative:wght@400;700&display=swap');
   * { margin:0; padding:0; box-sizing:border-box; }
-  body { background:#050308; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; font-family:'Cinzel',serif; color:#c8a8e8; overflow:hidden; }
-  #game-wrapper { position:relative; width:800px; height:560px; }
+  body { background:#050308; display:flex; flex-direction:column; align-items:center; justify-content:center; width:100vw; height:100vh; font-family:'Cinzel',serif; color:#c8a8e8; overflow:hidden; }
+  #game-wrapper { position:relative; width:800px; height:560px; transform-origin:center center; }
   #canvas { display:block; border:1px solid rgba(120,60,180,0.4); }
   #hud { position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; }
 
@@ -887,7 +887,7 @@ function reiniciarJogo(){
 // INPUT
 // ═══════════════════════════════════════════════
 const keys={};
-window.addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;e.preventDefault();});
+window.addEventListener('keydown',e=>{if(document.activeElement.id==='nome-input')return;keys[e.key.toLowerCase()]=true;e.preventDefault();});
 window.addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;});
 
 // ═══════════════════════════════════════════════
@@ -954,6 +954,17 @@ function aumentarSkillJogador(nome,attr,val){
   if(attr==='cooldown') sk.cdMax=Math.max(0.2,sk.cdMax*(1-val));
   if(attr==='tamanho') sk.tamanho=Math.round(sk.tamanho*(1+val));
 }
+
+// ── FULLSCREEN SCALE ──
+function ajustarScale() {
+  const wrapper = document.getElementById('game-wrapper');
+  const scaleX = window.innerWidth  / 800;
+  const scaleY = window.innerHeight / 560;
+  const scale  = Math.min(scaleX, scaleY);
+  wrapper.style.transform = `scale(${scale})`;
+}
+ajustarScale();
+window.addEventListener('resize', ajustarScale);
 
 // Inicia na tela de nome
 renderRanking('ranking-start');
